@@ -76,7 +76,7 @@ class IntervalTrainer {
         this.answered = false;
         this.mode = 'simple';
         this.displayMode = 'visual';
-        this.tritoneEnabled = true;
+        this.tritoneEnabled = enabled;
 
         this.init();
     }

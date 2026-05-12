@@ -189,6 +189,23 @@ header h1 {
     opacity: 0.6;
 }
 
+.interval-btn.tritone-disabled {
+    background: #d0d0d0;
+    color: #888;
+    border-color: #bbb;
+    cursor: not-allowed;
+    opacity: 0.55;
+    transform: none;
+}
+
+.interval-btn.tritone-disabled:hover {
+    background: #d0d0d0;
+    color: #888;
+    border-color: #bbb;
+    transform: none;
+    box-shadow: none;
+}
+
 /* Результат и статистика */
 .result-section {
     text-align: center;

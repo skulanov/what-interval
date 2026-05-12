@@ -24,7 +24,7 @@ const NOTES_CONFIG = [
     { name: 'Db5', displayName: 'Ре ♭', file: 'audio/Db5.wav', midiNote: 73, baseNote: 'D', octave: 5, accidental: 'b' }
 ];
 
-// Только натуральные ноты (для простого режима)
+// Только натуральные ноты для простого режима
 const NATURAL_NOTES = NOTES_CONFIG.filter(note => note.accidental === '');
 
 const INTERVALS = [
@@ -43,43 +43,41 @@ const INTERVALS = [
     { semitones: 12, name: 'Октава', steps: 8 }
 ];
 
-// Порядок нот в октаве (для вычисления ступеней)
+// Порядок нот в октаве для вычисления ступеней
 const NOTE_ORDER = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 
-// Карта позиций нот на стане (Y координата) - базовые ноты без учета альтераций
-// Линии стана: 70 (F5), 90 (D5), 110 (B4), 130 (G4), 150 (E4)
+// Карта позиций нот на стане
 const NOTE_POSITIONS = {
-    'C4': 170,   // первая добавочная линия под станом
-    'D4': 160,   // сразу под нижней линией стана (без добавочных линий)
-    'E4': 150,   // первая линия снизу (нижняя линия стана)
-    'F4': 140,   // между первой и второй линией
-    'G4': 130,   // вторая линия
-    'A4': 120,   // между второй и третьей
-    'B4': 110,   // третья линия (средняя)
-    'C5': 100,   // между третьей и четвертой
-    'D5': 90,    // четвертая линия
-    'E5': 80,    // между четвертой и пятой
-    'F5': 70,    // пятая линия сверху
-    'G5': 60,    // над станом
-    'A5': 50,    // над станом
-    'B3': 180    // под первой добавочной линией
+    'C4': 170,
+    'D4': 160,
+    'E4': 150,
+    'F4': 140,
+    'G4': 130,
+    'A4': 120,
+    'B4': 110,
+    'C5': 100,
+    'D5': 90,
+    'E5': 80,
+    'F5': 70,
+    'G5': 60,
+    'A5': 50,
+    'B3': 180
 };
 
-// Получить позицию Y для ноты (по базовой ноте)
 function getNoteYPosition(noteObj) {
     const baseNoteWithOctave = noteObj.baseNote + noteObj.octave;
     return NOTE_POSITIONS[baseNoteWithOctave] || 140;
 }
 
-// Приложение
 class IntervalTrainer {
     constructor() {
         this.currentExercise = null;
         this.stats = { correct: 0, total: 0 };
         this.answered = false;
-        this.mode = 'simple'; // 'simple' или 'complex'
-        this.displayMode = 'visual'; // 'visual' или 'ear'
-        
+        this.mode = 'simple';
+        this.displayMode = 'visual';
+        this.tritoneEnabled = true;
+
         this.init();
     }
 
@@ -101,12 +99,19 @@ class IntervalTrainer {
             noteNames: document.getElementById('note-names'),
             notesGroup: document.getElementById('notes-group'),
             staffContainer: document.querySelector('.staff-container'),
+
             modeSimple: document.getElementById('mode-simple'),
             modeComplex: document.getElementById('mode-complex'),
             modeDesc: document.getElementById('mode-desc'),
+
             modeVisual: document.getElementById('mode-visual'),
             modeEar: document.getElementById('mode-ear'),
-            displayDesc: document.getElementById('display-desc')
+            displayDesc: document.getElementById('display-desc'),
+
+            tritoneOn: document.getElementById('tritone-on'),
+            tritoneOff: document.getElementById('tritone-off'),
+            tritoneDesc: document.getElementById('tritone-desc'),
+            tritoneButton: document.querySelector('.interval-btn[data-semitones="6"]')
         };
     }
 
@@ -114,26 +119,29 @@ class IntervalTrainer {
         this.elements.playFirst.addEventListener('click', () => this.playNote('first'));
         this.elements.playSecond.addEventListener('click', () => this.playNote('second'));
         this.elements.playBoth.addEventListener('click', () => this.playNote('both'));
-        
+
         this.elements.intervalButtons.forEach(btn => {
-            btn.addEventListener('click', () => this.checkAnswer(parseInt(btn.dataset.semitones)));
+            btn.addEventListener('click', () => {
+                if (btn.disabled) return;
+                this.checkAnswer(parseInt(btn.dataset.semitones));
+            });
         });
 
         this.elements.newExercise.addEventListener('click', () => this.generateNewExercise());
-        
-        // Переключатели режима сложности
+
         this.elements.modeSimple.addEventListener('click', () => this.switchMode('simple'));
         this.elements.modeComplex.addEventListener('click', () => this.switchMode('complex'));
-        
-        // Переключатели режима отображения
+
         this.elements.modeVisual.addEventListener('click', () => this.switchDisplayMode('visual'));
         this.elements.modeEar.addEventListener('click', () => this.switchDisplayMode('ear'));
+
+        this.elements.tritoneOn.addEventListener('click', () => this.switchTritoneMode(true));
+        this.elements.tritoneOff.addEventListener('click', () => this.switchTritoneMode(false));
     }
 
     switchMode(mode) {
         this.mode = mode;
-        
-        // Обновить кнопки
+
         if (mode === 'simple') {
             this.elements.modeSimple.classList.add('active');
             this.elements.modeComplex.classList.remove('active');
@@ -143,15 +151,13 @@ class IntervalTrainer {
             this.elements.modeComplex.classList.add('active');
             this.elements.modeDesc.textContent = 'В сложном режиме первая нота может быть с диезами и бемолями';
         }
-        
-        // Сгенерировать новое упражнение
+
         this.generateNewExercise();
     }
 
     switchDisplayMode(displayMode) {
         this.displayMode = displayMode;
-        
-        // Обновить кнопки
+
         if (displayMode === 'visual') {
             this.elements.modeVisual.classList.add('active');
             this.elements.modeEar.classList.remove('active');
@@ -165,202 +171,176 @@ class IntervalTrainer {
         }
     }
 
+    switchTritoneMode(enabled) {
+        this.tritoneEnabled = enabled;
+
+        if (enabled) {
+            this.elements.tritoneOn.classList.add('active');
+            this.elements.tritoneOff.classList.remove('active');
+            this.elements.tritoneDesc.textContent = 'Тритон включён в тренировку';
+        } else {
+            this.elements.tritoneOn.classList.remove('active');
+            this.elements.tritoneOff.classList.add('active');
+            this.elements.tritoneDesc.textContent = 'Тритон исключён из тренировки';
+        }
+
+        this.updateTritoneButtonState();
+        this.generateNewExercise();
+    }
+
     generateNewExercise() {
-        let note1Raw, note2Raw;
+        let note1Raw;
+        let note2Raw;
         let attempts = 0;
         const maxAttempts = 100;
-        
-        // Шаг 1: Генерируем две случайные ноты
+
         while (attempts < maxAttempts) {
             attempts++;
-            
+
             if (this.mode === 'simple') {
-                // ПРОСТОЙ РЕЖИМ: первая нота всегда натуральная
                 note1Raw = NATURAL_NOTES[Math.floor(Math.random() * NATURAL_NOTES.length)];
             } else {
-                // СЛОЖНЫЙ РЕЖИМ: первая нота может быть с альтерациями
                 note1Raw = NOTES_CONFIG[Math.floor(Math.random() * NOTES_CONFIG.length)];
             }
-            
+
             note2Raw = NOTES_CONFIG[Math.floor(Math.random() * NOTES_CONFIG.length)];
-            
-            // Проверка: вторая нота выше или равна первой И интервал <= 12 полутонов
+
             const semitonesRaw = note2Raw.midiNote - note1Raw.midiNote;
-            if (semitonesRaw >= 0 && semitonesRaw <= 12) {
+
+            if (
+                semitonesRaw >= 0 &&
+                semitonesRaw <= 12 &&
+                (this.tritoneEnabled || semitonesRaw !== 6)
+            ) {
                 break;
             }
         }
-        
-        // Шаг 2: Корректируем вторую ноту для получения правильного интервала
+
         const correctedPair = this.correctSecondNote(note1Raw, note2Raw);
-        
         const note1 = correctedPair.note1;
         const note2 = correctedPair.note2;
         const semitones = note2.midiNote - note1.midiNote;
 
         this.currentExercise = { note1, note2, semitones };
         this.answered = false;
-        
+
         this.displayNotes();
         this.clearResult();
         this.enableIntervalButtons();
         this.playNote('both');
     }
-    
-    /**
-     * НОВЫЙ АЛГОРИТМ: Корректирует вторую ноту для получения правильного интервала
-     * 
-     * Алгоритм:
-     * 1. Считаем количество полутонов между нотами
-     * 2. Определяем интервал по количеству полутонов
-     * 3. Из интервала получаем количество ступеней
-     * 4. Определяем правильную вторую ноту по ступеням от первой
-     * 5. Добавляем нужную альтерацию (♯ или ♭), чтобы получить эквивалент
-     */
+
     correctSecondNote(note1, note2Raw) {
-        // Шаг 1: Считаем количество полутонов между исходными нотами
         const semitones = note2Raw.midiNote - note1.midiNote;
-        
-        // Шаг 2: Определяем интервал по количеству полутонов
         const interval = INTERVALS.find(i => i.semitones === semitones);
+
         if (!interval) {
-            // Если интервал не найден, возвращаем как есть
             return { note1, note2: note2Raw };
         }
-        
-        // Шаг 3: Получаем количество ступеней из интервала
+
         const requiredSteps = interval.steps;
-        
-        // Шаг 4: Определяем правильную базовую ноту для второй ноты
         const correctBaseNote = this.getNoteBySteps(note1.baseNote, requiredSteps);
-        
-        // Шаг 5: Определяем октаву для второй ноты
         const correctOctave = this.calculateCorrectOctave(note1, correctBaseNote, requiredSteps);
-        
-        // Шаг 6: Вычисляем нужное значение MIDI для правильной ноты
         const correctBaseMidi = this.getMidiForNote(correctBaseNote, correctOctave);
-        
-        // Шаг 7: Вычисляем разницу с исходной второй нотой
         const midiDifference = note2Raw.midiNote - correctBaseMidi;
-        
-        // Шаг 8: Определяем нужную альтерацию
+
         let accidental = '';
         let displayName = '';
-        
+
         if (midiDifference === 0) {
-            // Нет альтерации
             accidental = '';
             displayName = this.getRussianNoteName(correctBaseNote);
         } else if (midiDifference === 1) {
-            // Нужен диез
             accidental = '#';
             displayName = `${this.getRussianNoteName(correctBaseNote)} ♯`;
         } else if (midiDifference === -1) {
-            // Нужен бемоль
             accidental = 'b';
             displayName = `${this.getRussianNoteName(correctBaseNote)} ♭`;
         } else {
-            // Если разница больше 1 полутона, что-то пошло не так
-            // Возвращаем исходную вторую ноту
             return { note1, note2: note2Raw };
         }
-        
-        // Шаг 9: Создаём скорректированную вторую ноту
+
         const correctedNote2 = {
             name: `${correctBaseNote}${accidental}${correctOctave}`,
-            displayName: displayName,
-            file: note2Raw.file, // Используем тот же аудио файл (энгармонический эквивалент)
+            displayName,
+            file: note2Raw.file,
             midiNote: note2Raw.midiNote,
             baseNote: correctBaseNote,
             octave: correctOctave,
-            accidental: accidental
+            accidental
         };
-        
+
         return { note1, note2: correctedNote2 };
     }
-    
-    /**
-     * Получить ноту на заданном количестве ступеней от базовой ноты
-     */
+
     getNoteBySteps(baseNote, steps) {
         const index = NOTE_ORDER.indexOf(baseNote);
         if (index === -1) return baseNote;
-        
-        // steps = 1 означает ту же ноту (унисон)
-        // steps = 2 означает следующую ноту (секунда)
+
         const newIndex = (index + steps - 1) % 7;
         return NOTE_ORDER[newIndex];
     }
-    
-    /**
-     * Вычислить правильную октаву для второй ноты
-     */
+
     calculateCorrectOctave(note1, correctBaseNote, steps) {
         const index1 = NOTE_ORDER.indexOf(note1.baseNote);
         const index2 = NOTE_ORDER.indexOf(correctBaseNote);
-        
         let octave = note1.octave;
-        
-        // Если вторая нота "ниже" первой по алфавиту, значит перешли в следующую октаву
+
         if (index2 < index1 || (index2 === index1 && steps > 1)) {
             octave++;
         }
-        
+
         return octave;
     }
-    
-    /**
-     * Получить MIDI номер для натуральной ноты (без альтераций)
-     */
+
     getMidiForNote(baseNote, octave) {
-        // C4 = 60 (стандартная средняя нота)
         const baseMidiC4 = 60;
         const noteOffsets = {
-            'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11
+            C: 0,
+            D: 2,
+            E: 4,
+            F: 5,
+            G: 7,
+            A: 9,
+            B: 11
         };
-        
+
         const offset = noteOffsets[baseNote] || 0;
         const octaveOffset = (octave - 4) * 12;
-        
+
         return baseMidiC4 + offset + octaveOffset;
     }
-    
-    /**
-     * Получить русское название ноты
-     */
+
     getRussianNoteName(baseNote) {
         const names = {
-            'C': 'До', 'D': 'Ре', 'E': 'Ми', 'F': 'Фа',
-            'G': 'Соль', 'A': 'Ля', 'B': 'Си'
+            C: 'До',
+            D: 'Ре',
+            E: 'Ми',
+            F: 'Фа',
+            G: 'Соль',
+            A: 'Ля',
+            B: 'Си'
         };
+
         return names[baseNote] || baseNote;
     }
 
     displayNotes() {
         const { note1, note2 } = this.currentExercise;
-        
-        // Обновляем текстовые названия нот
+
         this.elements.noteNames.textContent = `${note1.displayName} – ${note2.displayName}`;
-        
-        // Очищаем предыдущие ноты
         this.elements.notesGroup.innerHTML = '';
-        
-        // Рисуем первую ноту
+
         this.drawNote(note1, 250);
-        
-        // Рисуем вторую ноту
         this.drawNote(note2, 450);
     }
 
     drawNote(noteObj, xPosition) {
-        const svgNS = "http://www.w3.org/2000/svg";
+        const svgNS = 'http://www.w3.org/2000/svg';
         const yPosition = getNoteYPosition(noteObj);
-        
-        // Определяем, нужна ли добавочная линия
         const baseNoteWithOctave = noteObj.baseNote + noteObj.octave;
-        
+
         if (baseNoteWithOctave === 'C4' || baseNoteWithOctave === 'B3') {
-            // Одна добавочная линия под станом (для C4 и B3)
             const ledger = document.createElementNS(svgNS, 'line');
             ledger.setAttribute('class', 'ledger-line');
             ledger.setAttribute('x1', xPosition - 20);
@@ -369,11 +349,8 @@ class IntervalTrainer {
             ledger.setAttribute('y2', 170);
             this.elements.notesGroup.appendChild(ledger);
         }
-        // D4 не нуждается в добавочных линиях (сразу под нижней линией стана)
-        
-        // Рисуем знак альтерации (диез или бемоль), если есть
+
         if (noteObj.accidental === 'b') {
-            // Бемоль
             const flat = document.createElementNS(svgNS, 'text');
             flat.setAttribute('x', xPosition - 25);
             flat.setAttribute('y', yPosition + 5);
@@ -383,7 +360,6 @@ class IntervalTrainer {
             flat.textContent = '♭';
             this.elements.notesGroup.appendChild(flat);
         } else if (noteObj.accidental === '#') {
-            // Диез
             const sharp = document.createElementNS(svgNS, 'text');
             sharp.setAttribute('x', xPosition - 25);
             sharp.setAttribute('y', yPosition + 5);
@@ -393,8 +369,7 @@ class IntervalTrainer {
             sharp.textContent = '♯';
             this.elements.notesGroup.appendChild(sharp);
         }
-        
-        // Рисуем головку ноты (эллипс)
+
         const noteHead = document.createElementNS(svgNS, 'ellipse');
         noteHead.setAttribute('class', 'note-circle');
         noteHead.setAttribute('cx', xPosition);
@@ -402,8 +377,7 @@ class IntervalTrainer {
         noteHead.setAttribute('rx', 12);
         noteHead.setAttribute('ry', 9);
         this.elements.notesGroup.appendChild(noteHead);
-        
-        // Рисуем штиль (вертикальная линия)
+
         const stem = document.createElementNS(svgNS, 'line');
         stem.setAttribute('class', 'note-circle');
         stem.setAttribute('x1', xPosition + 11);
@@ -411,8 +385,7 @@ class IntervalTrainer {
         stem.setAttribute('x2', xPosition + 11);
         stem.setAttribute('y2', yPosition - 50);
         this.elements.notesGroup.appendChild(stem);
-        
-        // Подпись ноты
+
         const text = document.createElementNS(svgNS, 'text');
         text.setAttribute('class', 'note-text');
         text.setAttribute('x', xPosition);
@@ -430,7 +403,6 @@ class IntervalTrainer {
             } else if (mode === 'second') {
                 await this.playAudioFile(note2.file);
             } else if (mode === 'both') {
-                // Воспроизводим обе ноты одновременно (гармонический интервал)
                 await this.playAudioFiles([note1.file, note2.file]);
             }
         } catch (error) {
@@ -448,33 +420,31 @@ class IntervalTrainer {
     }
 
     playAudioFiles(files) {
-        // Воспроизводим несколько файлов одновременно
         const promises = files.map(file => {
             const audio = new Audio(file);
             return audio.play();
         });
+
         return Promise.all(promises);
     }
 
     checkAnswer(selectedSemitones) {
         if (this.answered) return;
-        
+
         this.answered = true;
         this.stats.total++;
-        
+
         const correctSemitones = this.currentExercise.semitones;
         const correctInterval = INTERVALS.find(i => i.semitones === correctSemitones);
         const selectedInterval = INTERVALS.find(i => i.semitones === selectedSemitones);
-        
+
         if (selectedSemitones === correctSemitones) {
-            // Правильный ответ
             this.stats.correct++;
             this.showResult(true, correctInterval);
         } else {
-            // Неправильный ответ
             this.showResult(false, correctInterval, selectedInterval);
         }
-        
+
         this.updateStatistics();
         this.disableIntervalButtons();
     }
@@ -482,18 +452,18 @@ class IntervalTrainer {
     showResult(isCorrect, correctInterval, selectedInterval = null) {
         const message = this.elements.resultMessage;
         message.className = 'result-message';
-        
+
         if (isCorrect) {
             message.classList.add('success');
-            message.innerHTML = `✓ Правильно! <br>${correctInterval.name} (${correctInterval.semitones} ${this.getSemitonesWord(correctInterval.semitones)})`;
+            message.innerHTML = `✓ Правильно!<br>${correctInterval.name} (${correctInterval.semitones} ${this.getSemitonesWord(correctInterval.semitones)})`;
         } else {
             message.classList.add('error');
             message.innerHTML = `✗ Неправильно!<br>Правильный ответ: ${correctInterval.name} (${correctInterval.semitones} ${this.getSemitonesWord(correctInterval.semitones)})`;
         }
 
-        // Подсветить правильную/неправильную кнопку
         this.elements.intervalButtons.forEach(btn => {
             const semitones = parseInt(btn.dataset.semitones);
+
             if (semitones === correctInterval.semitones) {
                 btn.classList.add('correct');
             } else if (selectedInterval && semitones === selectedInterval.semitones) {
@@ -511,8 +481,7 @@ class IntervalTrainer {
     clearResult() {
         this.elements.resultMessage.textContent = '';
         this.elements.resultMessage.className = 'result-message';
-        
-        // Убрать подсветку кнопок
+
         this.elements.intervalButtons.forEach(btn => {
             btn.classList.remove('correct', 'incorrect', 'selected');
         });
@@ -521,12 +490,21 @@ class IntervalTrainer {
     updateStatistics() {
         const { correct, total } = this.stats;
         const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
+
         this.elements.statistics.textContent = `Правильно: ${correct} из ${total} (${percentage}%)`;
     }
 
     enableIntervalButtons() {
         this.elements.intervalButtons.forEach(btn => {
-            btn.disabled = false;
+            const semitones = parseInt(btn.dataset.semitones);
+
+            if (!this.tritoneEnabled && semitones === 6) {
+                btn.disabled = true;
+                btn.classList.add('tritone-disabled');
+            } else {
+                btn.disabled = false;
+                btn.classList.remove('tritone-disabled');
+            }
         });
     }
 
@@ -535,9 +513,21 @@ class IntervalTrainer {
             btn.disabled = true;
         });
     }
+
+    updateTritoneButtonState() {
+        const btn = this.elements.tritoneButton;
+        if (!btn) return;
+
+        if (this.tritoneEnabled) {
+            btn.disabled = false;
+            btn.classList.remove('tritone-disabled');
+        } else {
+            btn.disabled = true;
+            btn.classList.add('tritone-disabled');
+        }
+    }
 }
 
-// Инициализация приложения при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
     new IntervalTrainer();
 });

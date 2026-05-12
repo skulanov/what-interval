@@ -7,42 +7,40 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="container">
-        <!-- Заголовок -->
+    <main class="container">
         <header>
             <h1>Интервальный тренажер</h1>
         </header>
 
-        <!-- Нотный стан -->
         <section class="staff-container">
-            <svg id="staff" viewBox="0 0 800 260" xmlns="http://www.w3.org/2000/svg">
-                <!-- Линии нотного стана -->
+            <svg id="staff" viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg">
                 <g id="staff-lines">
-                    <line x1="50" y1="70" x2="750" y2="70" stroke="#333" stroke-width="2"/>
-                    <line x1="50" y1="90" x2="750" y2="90" stroke="#333" stroke-width="2"/>
-                    <line x1="50" y1="110" x2="750" y2="110" stroke="#333" stroke-width="2"/>
-                    <line x1="50" y1="130" x2="750" y2="130" stroke="#333" stroke-width="2"/>
-                    <line x1="50" y1="150" x2="750" y2="150" stroke="#333" stroke-width="2"/>
+                    <line x1="100" y1="70" x2="600" y2="70" stroke="#333" stroke-width="2"/>
+                    <line x1="100" y1="90" x2="600" y2="90" stroke="#333" stroke-width="2"/>
+                    <line x1="100" y1="110" x2="600" y2="110" stroke="#333" stroke-width="2"/>
+                    <line x1="100" y1="130" x2="600" y2="130" stroke="#333" stroke-width="2"/>
+                    <line x1="100" y1="150" x2="600" y2="150" stroke="#333" stroke-width="2"/>
                 </g>
-                
-                <!-- Ноты (будут добавлены динамически) -->
+
+                <g id="clef">
+                    <text x="120" y="145" font-size="90" font-family="serif" fill="#333">𝄞</text>
+                </g>
+
                 <g id="notes-group"></g>
             </svg>
-            
-            <!-- Отображение названий нот -->
+
             <div id="note-names" class="note-names"></div>
         </section>
 
-        <!-- Кнопки управления звуком -->
         <section class="controls">
             <button id="play-first" class="control-btn">▶ Первая нота</button>
             <button id="play-second" class="control-btn">▶ Вторая нота</button>
             <button id="play-both" class="control-btn">▶ Вместе</button>
         </section>
 
-        <!-- Кнопки выбора интервалов -->
         <section class="intervals">
             <h3>Какой это интервал?</h3>
+
             <div class="interval-grid">
                 <button class="interval-btn" data-semitones="0">Унисон (прима)</button>
                 <button class="interval-btn" data-semitones="1">Малая секунда</button>
@@ -60,41 +58,52 @@
             </div>
         </section>
 
-        <!-- Результат и статистика -->
         <section class="result-section">
             <div id="result-message" class="result-message"></div>
             <div id="statistics" class="statistics">Правильно: 0 из 0 (0%)</div>
+
             <div class="action-buttons">
                 <button id="new-exercise" class="action-btn">Новый интервал</button>
             </div>
         </section>
 
-        <!-- Переключатель режима сложности -->
         <section class="mode-switch-section">
             <div class="mode-switch">
                 <span class="mode-label">Сложность:</span>
                 <button id="mode-simple" class="mode-btn active">Простой</button>
                 <button id="mode-complex" class="mode-btn">Сложный</button>
             </div>
+
             <div class="mode-description">
                 <p id="mode-desc">В простом режиме первая нота всегда без диезов и бемолей</p>
             </div>
         </section>
 
-        <!-- Переключатель режима отображения -->
         <section class="mode-switch-section">
             <div class="mode-switch">
                 <span class="mode-label">Отображение:</span>
                 <button id="mode-visual" class="mode-btn active">С нотами</button>
                 <button id="mode-ear" class="mode-btn">На слух</button>
             </div>
+
             <div class="mode-description">
                 <p id="display-desc">В режиме "На слух" нотный стан скрыт</p>
             </div>
         </section>
-    </div>
 
-    <!-- Копирайт -->
+        <section class="mode-switch-section">
+            <div class="mode-switch">
+                <span class="mode-label">Тритон:</span>
+                <button id="tritone-on" class="mode-btn active">Вкл</button>
+                <button id="tritone-off" class="mode-btn">Выкл</button>
+            </div>
+
+            <div class="mode-description">
+                <p id="tritone-desc">Тритон включён в тренировку</p>
+            </div>
+        </section>
+    </main>
+
     <footer class="footer">
         <p>by Dima Skulanov, 2025</p>
     </footer>
